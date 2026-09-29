@@ -1,0 +1,1404 @@
+﻿<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>超級數學瑪利歐 · 三位數加減大冒險</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<style>
+  :root{
+    --sky:#5c94fc; --mario:#e84a23; --grass:#00a800; --pipe:#0058f8;
+    --coin:#f8d820; --panel:#fcd8a8; --ground:#882000; --border:#b89800; --ink:#3a2a00;
+  }
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Noto Sans TC',sans-serif;background:var(--sky);
+    background-image:radial-gradient(circle at 15% 18%,rgba(255,255,255,.32) 0 42px,transparent 43px),
+                     radial-gradient(circle at 82% 12%,rgba(255,255,255,.22) 0 30px,transparent 31px);
+    min-height:100vh;
+  }
+  .pixel{font-family:'Press Start 2P',monospace;}
+  .mario-shadow{text-shadow:3px 3px 0 var(--ink);}
+  .hidden{display:none!important;}
+
+  .btn-3d{border-bottom-width:6px;border-right-width:6px;transition:transform .06s,filter .15s;}
+  .btn-3d:active{transform:translate(3px,3px);border-bottom-width:3px;border-right-width:3px;}
+  .btn-3d:hover{filter:brightness(1.08);}
+
+  .ground{height:40px;background:var(--ground);border-top:8px solid #c84c0c;
+    background-image:repeating-linear-gradient(90deg,rgba(0,0,0,.18) 0 24px,transparent 24px 48px);}
+
+  .topbar{background:var(--panel);border:4px solid var(--border);border-radius:12px;
+    padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;
+    box-shadow:0 6px 0 rgba(0,0,0,.25);}
+  .tb-label{font-size:9px;font-weight:900;color:rgba(58,42,0,.7);display:block;text-align:center;}
+  .tb-val{font-family:'Press Start 2P',monospace;font-size:11px;color:var(--ink);}
+  .tb-coin{width:14px;height:14px;border-radius:50%;background:var(--coin);border:2px solid var(--border);display:inline-block;}
+
+  /* ---------- 積木 ---------- */
+  .blk-h{width:38px;height:38px;background:var(--mario);border:2px solid #7f1d1d;display:grid;
+    grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(10,1fr);flex:0 0 auto;transition:all .3s;}
+  .blk-h i{border:.5px solid rgba(127,29,29,.55);}
+  .blk-t{width:7px;height:38px;background:var(--grass);border:2px solid #14532d;display:flex;
+    flex-direction:column;flex:0 0 auto;transition:all .3s;}
+  .blk-t i{flex:1;border-bottom:.5px solid rgba(20,83,45,.55);}
+  .blk-u{width:13px;height:13px;background:var(--coin);border:2px solid var(--border);flex:0 0 auto;transition:all .3s;}
+
+  .blocks-grid{display:grid;grid-template-columns:88px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);
+    background:var(--panel);border:4px solid var(--border);border-radius:16px;overflow:hidden;
+    box-shadow:0 10px 0 rgba(0,0,0,.18);}
+  .block-cell,.row-label,.bg-head{min-width:0;}
+  .bg-head{padding:8px;text-align:center;font-weight:900;color:#fff;font-size:14px;border-right:1px solid rgba(255,255,255,.25);}
+  .row-label{background:#f1e0c0;padding:8px;display:flex;flex-direction:column;justify-content:center;
+    align-items:center;font-weight:900;color:#5b4410;text-align:center;border-bottom:2px solid var(--border);
+    border-right:2px solid var(--border);font-size:12px;line-height:1.3;}
+  .row-label-res{background:#e6f7d9;color:#1c7a1c;}
+  .block-cell{padding:8px;display:flex;flex-wrap:wrap;gap:4px;align-content:flex-start;align-items:center;
+    min-height:96px;border-bottom:2px solid #e2cfa6;border-right:1px dashed #d8bf94;background:#fffdf6;position:relative;}
+  .block-cell-res{background:#f2fbe9;border-bottom:none;}
+  .carry-stop-point{position:absolute;bottom:4px;right:4px;width:40px;height:40px;display:flex;
+    align-items:center;justify-content:center;pointer-events:none;z-index:20;}
+
+  /* ---------- 動畫 ---------- */
+  .flying-block{position:fixed;z-index:9999;box-shadow:0 0 20px rgba(249,115,22,.85);pointer-events:none;
+    margin:0!important;transition:all 1.2s cubic-bezier(.68,-.55,.27,1.55);}
+  .flash-highlight{filter:brightness(1.3) drop-shadow(0 0 6px rgba(250,204,21,.9));transform:scale(1.12);z-index:15;}
+  .carry-highlight{outline:3px solid #f97316;outline-offset:2px;z-index:10;box-shadow:0 0 8px #f97316;}
+  .removing{transform:scale(0) translateY(-20px);opacity:0;transition:all .5s cubic-bezier(.4,0,.2,1);}
+  .pop-in{animation:pop .4s cubic-bezier(.175,.885,.32,1.275) forwards;}
+  .drop-in{animation:drop .5s cubic-bezier(.34,1.56,.64,1) forwards;}
+  .blink-pair{animation:blinkPair .3s ease-in-out 2;border-color:#ef4444!important;}
+  .cross-out{position:relative;}
+  .cross-out::after{content:"";position:absolute;inset:0;z-index:20;pointer-events:none;
+    background:linear-gradient(to top right,transparent 45%,#ef4444 45%,#ef4444 55%,transparent 55%);}
+  .crossed-text{position:relative;color:#94a3b8!important;}
+  .crossed-text::after{content:"";position:absolute;top:50%;left:-10%;width:120%;height:4px;
+    background:#ef4444;transform:rotate(-20deg);border-radius:2px;}
+  .crossed-input{background-image:linear-gradient(to top right,transparent 46%,#ef4444 46%,#ef4444 54%,transparent 54%);
+    color:#94a3b8!important;border-color:#cbd5e1!important;pointer-events:none;}
+  .anim-pop{animation:pop .35s ease-out;}
+  .shake-error{animation:shake .5s ease-in-out;}
+
+  @keyframes pop{0%{transform:scale(.2);opacity:0;}60%{transform:scale(1.15);}100%{transform:scale(1);opacity:1;}}
+  @keyframes drop{0%{transform:translateY(-30px);opacity:0;}100%{transform:translateY(0);opacity:1;}}
+  @keyframes blinkPair{0%,100%{filter:brightness(1);box-shadow:0 0 0 transparent;}50%{filter:brightness(1.6);box-shadow:0 0 8px #ef4444;}}
+  @keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-10px);}50%{transform:translateX(10px);}75%{transform:translateX(-10px);}}
+  @keyframes floatUp{0%{transform:translateY(0);opacity:1;}100%{transform:translateY(-60px);opacity:0;}}
+  @keyframes beadIn{0%{transform:scale(0);opacity:0;}70%{transform:scale(1.25);}100%{transform:scale(1);opacity:1;}}
+
+  /* ---------- 直式算盤 ---------- */
+  .math-board{background:#fff;border:4px solid #e2cfa6;border-radius:22px;padding:14px 10px;
+    box-shadow:0 8px 0 rgba(0,0,0,.15);}
+  .math-row{display:flex;justify-content:center;align-items:center;gap:8px;position:relative;}
+  .digit-cell{width:58px;height:64px;display:flex;justify-content:center;align-items:center;
+    position:relative;font-size:1.9rem;font-weight:900;color:#1e293b;}
+  .digit-cell .op-sign{color:var(--mario);font-size:2.2rem;}
+  .carry-row .digit-cell{height:46px;}
+  .carry-row .carry-input{position:absolute;right:-21px;top:50%;transform:translateY(-50%);}
+  .borrow-row .digit-cell{height:54px;}
+  .borrow-tag{font-size:11px;font-weight:900;color:#e11d48;letter-spacing:2px;writing-mode:vertical-rl;}
+  .main-ans.locked{cursor:not-allowed;}
+  .ans-row{border-top:4px solid #0f172a;margin-top:6px;padding-top:6px;}
+  .carry-input{width:34px;height:34px;border:2px dashed #94a3b8;border-radius:6px;text-align:center;
+    font-weight:900;color:var(--mario);background:#fff;font-size:1rem;outline:none;appearance:none;}
+  .carry-input::-webkit-outer-spin-button,.carry-input::-webkit-inner-spin-button{appearance:none;}
+  .main-ans{width:100%;height:100%;border:2px solid #e2cfa6;border-radius:10px;background:#fffdf6;
+    text-align:center;font-weight:900;font-size:2rem;color:var(--pipe);outline:none;}
+  .main-ans:disabled{background:#fbf7ec;color:#cbd5e1;}
+  .borrow-input{width:46px;height:46px;font-size:1.4rem;text-align:center;border:3px dashed #94a3b8;
+    border-radius:10px;color:var(--mario);font-weight:900;background:#fff;outline:none;}
+  .borrow-input:focus{border-style:solid;border-color:#3b82f6;box-shadow:0 0 0 4px rgba(59,130,246,.2);}
+  .borrow-input.warn{border-color:#f59e0b!important;background:#fffbeb!important;color:#b45309!important;}
+  @keyframes pulseInput{0%,100%{box-shadow:0 0 0 0 rgba(59,130,246,.55);}50%{box-shadow:0 0 0 7px rgba(59,130,246,0);}}
+  input.main-ans.active,.borrow-input:not(.hidden):not(.correct){animation:pulseInput 1.3s ease-in-out infinite;}
+  @keyframes pulseBtn{0%,100%{transform:scale(1);}50%{transform:scale(1.05);}}
+  #btn-borrow:not(.hidden){animation:pulseBtn 1s ease-in-out infinite;}
+  input.active,.borrow-input.active{background:#fff!important;border:2px solid #3b82f6!important;
+    box-shadow:inset 0 0 10px rgba(59,130,246,.25);}
+  input.error{border:2px solid #ef4444!important;background:#fef2f2!important;color:#ef4444!important;animation:shake .4s;}
+  input.correct{border-color:#16a34a!important;color:#16a34a!important;background:#ecfdf5!important;}
+  .borrow-input.correct{border-style:solid;pointer-events:none;}
+
+  /* ---------- 點珠提示 ---------- */
+  #bead-hint{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9000;
+    background:rgba(58,42,0,.94);border:4px solid var(--coin);border-radius:16px;padding:12px 16px;
+    box-shadow:0 8px 0 rgba(0,0,0,.35);max-width:94vw;}
+  .bead-title{color:var(--coin);font-weight:900;font-size:14px;margin-bottom:8px;text-align:center;}
+  .bead-wrap{width:232px;display:flex;flex-wrap:wrap;gap:4px;margin:0 auto;}
+  .bead{width:18px;height:18px;border-radius:50%;border:2px solid rgba(0,0,0,.35);opacity:0;
+    animation:beadIn .3s ease-out forwards;}
+  .bead-overflow{outline:3px solid #ef4444;outline-offset:1px;}
+  .bead-break{flex-basis:100%;height:0;}
+  .bead-total{color:#fff;font-weight:700;font-size:12px;margin-top:8px;text-align:center;}
+
+  /* ---------- 數字鍵盤 ---------- */
+  .numpad-key{font-family:'Press Start 2P',monospace;background:var(--coin);color:var(--ink);
+    border:3px solid var(--border);border-bottom-width:6px;border-right-width:6px;border-radius:10px;
+    padding:10px 0;font-size:15px;transition:transform .06s;}
+  .numpad-key:active{transform:translate(3px,3px);border-bottom-width:3px;border-right-width:3px;}
+
+  .no-scrollbar::-webkit-scrollbar{display:none;}
+  .no-scrollbar{-ms-overflow-style:none;scrollbar-width:none;}
+</style>
+</head>
+<body>
+<div id="app" class="min-h-screen flex flex-col">
+
+  <!-- ================= MENU ================= -->
+  <section id="screen-menu" class="screen flex-1 flex flex-col">
+    <div class="flex-1 flex flex-col items-center justify-center px-4 py-10">
+      <div class="text-center mb-8 anim-pop">
+        <h1 class="pixel text-xl sm:text-3xl text-coin mario-shadow leading-relaxed">超級數學瑪利歐</h1>
+        <p class="pixel text-[9px] sm:text-xs text-white mt-4 tracking-widest">2 &amp; 3-DIGIT MATH ADVENTURE</p>
+        <p class="text-[11px] font-bold text-white/80 mt-2">版本 v5 · 若畫面異常請按 Ctrl+F5 重新載入</p>
+      </div>
+      <div class="w-full max-w-3xl grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div class="space-y-3">
+          <div class="pixel text-[10px] text-white text-center">二位數</div>
+          <button onclick="pickCategory('add', 2)" class="btn-3d w-full rounded-xl py-4 px-5 text-white text-left shadow-[0_8px_0_rgba(0,0,0,.25)]" style="background:#00a800;border:6px solid #006400">
+            <div class="pixel text-sm sm:text-base">加法大關</div>
+            <div class="text-xs font-bold opacity-90 mt-1">二位數 · 練習進位 Carry</div>
+          </button>
+          <button onclick="pickCategory('sub', 2)" class="btn-3d w-full rounded-xl py-4 px-5 text-white text-left shadow-[0_8px_0_rgba(0,0,0,.25)]" style="background:#0058f8;border:6px solid #003ab0">
+            <div class="pixel text-sm sm:text-base">減法大關</div>
+            <div class="text-xs font-bold opacity-90 mt-1">二位數 · 練習退位 Borrow</div>
+          </button>
+          <button onclick="pickCategory('mixed', 2)" class="btn-3d w-full rounded-xl py-4 px-5 text-left shadow-[0_8px_0_rgba(0,0,0,.25)]" style="background:#f8d820;border:6px solid #b89800;color:#3a2a00">
+            <div class="pixel text-sm sm:text-base">加減綜合</div>
+            <div class="text-xs font-bold opacity-90 mt-1">二位數 · 進退位綜合</div>
+          </button>
+        </div>
+        <div class="space-y-3">
+          <div class="pixel text-[10px] text-white text-center">三位數</div>
+          <button onclick="pickCategory('add', 3)" class="btn-3d w-full rounded-xl py-4 px-5 text-white text-left shadow-[0_8px_0_rgba(0,0,0,.25)]" style="background:#00a800;border:6px solid #006400">
+            <div class="pixel text-sm sm:text-base">加法大關</div>
+            <div class="text-xs font-bold opacity-90 mt-1">三位數 · 練習進位 Carry</div>
+          </button>
+          <button onclick="pickCategory('sub', 3)" class="btn-3d w-full rounded-xl py-4 px-5 text-white text-left shadow-[0_8px_0_rgba(0,0,0,.25)]" style="background:#0058f8;border:6px solid #003ab0">
+            <div class="pixel text-sm sm:text-base">減法大關</div>
+            <div class="text-xs font-bold opacity-90 mt-1">三位數 · 練習退位 Borrow</div>
+          </button>
+          <button onclick="pickCategory('mixed', 3)" class="btn-3d w-full rounded-xl py-4 px-5 text-left shadow-[0_8px_0_rgba(0,0,0,.25)]" style="background:#f8d820;border:6px solid #b89800;color:#3a2a00">
+            <div class="pixel text-sm sm:text-base">加減綜合</div>
+            <div class="text-xs font-bold opacity-90 mt-1">三位數 · 進退位綜合</div>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="ground"></div>
+  </section>
+
+  <!-- ================= LEVEL ================= -->
+  <section id="screen-level" class="screen hidden flex-1 flex flex-col">
+    <div class="flex-1 px-4 py-8 max-w-xl mx-auto w-full">
+      <div class="border-4 rounded-xl p-4 mb-6 shadow-[0_8px_0_rgba(0,0,0,.25)]" style="background:var(--panel);border-color:var(--border)">
+        <h2 id="level-title" class="pixel text-base sm:text-xl text-center" style="color:var(--mario)">加法大關</h2>
+        <p class="text-center text-sm font-bold mt-2" style="color:rgba(58,42,0,.8)">選擇一個關卡開始冒險</p>
+      </div>
+      <div id="level-list" class="space-y-3"></div>
+      <button onclick="goMenu()" class="btn-3d mt-6 w-full rounded-xl py-3 font-black text-white shadow-[0_6px_0_rgba(0,0,0,.2)]" style="background:var(--mario);border:6px solid #a32a10">← 返回主選單</button>
+    </div>
+    <div class="ground"></div>
+  </section>
+
+  <!-- ================= GAME ================= -->
+  <section id="screen-game" class="screen hidden flex-1 flex flex-col">
+    <div class="px-3 pt-3 max-w-6xl mx-auto w-full">
+      <div class="topbar">
+        <div><span class="tb-label">WORLD</span><span class="tb-val" id="tb-world">1-1</span></div>
+        <div><span class="tb-label">SCORE</span><span class="tb-val" id="score" style="color:var(--mario)">0000</span></div>
+        <div class="flex items-center gap-1"><span class="tb-coin"></span><span class="tb-val" id="coins">0</span></div>
+        <div><span class="tb-label">題號</span><span class="tb-val" id="q-progress">1</span></div>
+      </div>
+    </div>
+
+    <div id="game-body" class="flex-1 px-3 py-4 max-w-6xl mx-auto w-full">
+      <div class="flex flex-col xl:flex-row gap-4 items-stretch justify-center">
+        <div class="xl:w-3/5 flex flex-col">
+          <div class="blocks-grid">
+            <div style="background:#334155"></div>
+            <div class="bg-head" style="background:var(--mario)">百位</div>
+            <div class="bg-head" style="background:var(--grass)">十位</div>
+            <div class="bg-head" style="background:var(--border)">個位</div>
+
+            <div class="row-label" id="label-row1">加數 1</div>
+            <div id="blk-a-h" class="block-cell"></div>
+            <div id="blk-a-t" class="block-cell"></div>
+            <div id="blk-a-u" class="block-cell"></div>
+
+            <div class="row-label" id="label-row2">加數 2</div>
+            <div id="blk-b-h" class="block-cell"><div id="stop-h" class="carry-stop-point"></div></div>
+            <div id="blk-b-t" class="block-cell"><div id="stop-t" class="carry-stop-point"></div></div>
+            <div id="blk-b-u" class="block-cell"></div>
+
+            <div class="row-label row-label-res" id="label-row3">總和</div>
+            <div id="blk-c-h" class="block-cell block-cell-res"></div>
+            <div id="blk-c-t" class="block-cell block-cell-res"></div>
+            <div id="blk-c-u" class="block-cell block-cell-res"></div>
+          </div>
+
+          <div class="mt-4 p-4 rounded-xl shadow-md flex justify-between items-center gap-3" style="background:var(--panel);border:3px solid var(--border)">
+            <div id="instruction" class="text-base sm:text-lg font-bold flex-1" style="color:var(--ink)">準備開始...</div>
+            <span id="mascot" class="text-3xl">👩‍🏫</span>
+          </div>
+
+        </div>
+
+        <div class="xl:w-2/5 flex flex-col items-center gap-3">
+          <div id="math-board" class="math-board w-full max-w-sm"></div>
+          <div class="mt-3 flex gap-2 min-h-[56px] w-full max-w-sm">
+            <button id="btn-borrow" class="hidden flex-[2] rounded-xl py-3 font-black text-white text-base shadow-lg active:scale-95" style="background:#e11d48">🔨 不夠減！我要借位</button>
+            <button id="btn-replay" class="hidden flex-1 rounded-xl py-3 font-bold text-white text-sm shadow-lg active:scale-95" style="background:#f59e0b">🔄 重看動畫</button>
+            <button id="btn-next" class="hidden flex-1 rounded-xl py-3 font-black text-white text-base shadow-lg active:scale-95" style="background:#0058f8">下一題 ➡️</button>
+          </div>
+          <div class="w-full max-w-sm">
+            <div class="grid grid-cols-3 gap-2" id="numpad">
+              <button class="numpad-key" data-k="1">1</button>
+              <button class="numpad-key" data-k="2">2</button>
+              <button class="numpad-key" data-k="3">3</button>
+              <button class="numpad-key" data-k="4">4</button>
+              <button class="numpad-key" data-k="5">5</button>
+              <button class="numpad-key" data-k="6">6</button>
+              <button class="numpad-key" data-k="7">7</button>
+              <button class="numpad-key" data-k="8">8</button>
+              <button class="numpad-key" data-k="9">9</button>
+              <button class="numpad-key" data-k="clear" style="background:var(--mario);color:#fff;border-color:#a32a10">清除</button>
+              <button class="numpad-key" data-k="0">0</button>
+              <button class="numpad-key" data-k="enter" style="background:var(--grass);color:#fff;border-color:#006400">確定</button>
+            </div>
+          </div>
+          <button onclick="quitGame()" class="text-xs font-black text-white/90 underline underline-offset-2 hover:text-white">放棄並返回選單</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ground"></div>
+  </section>
+
+  <!-- ================= RESULT ================= -->
+  <section id="screen-result" class="screen hidden flex-1 flex flex-col">
+    <div class="flex-1 flex flex-col items-center justify-center px-4 py-10">
+      <div class="border-4 rounded-2xl p-6 sm:p-8 max-w-md w-full text-center shadow-[0_10px_0_rgba(0,0,0,.25)] anim-pop" style="background:var(--panel);border-color:var(--border)">
+        <h2 class="pixel text-lg sm:text-2xl mario-shadow" style="color:var(--grass)">STAGE CLEAR!</h2>
+        <div class="mt-6 space-y-3">
+          <div class="flex items-center justify-between bg-white/60 rounded-lg px-4 py-2"><span class="font-black" style="color:var(--ink)">得分 SCORE</span><span class="pixel text-sm" id="res-score" style="color:var(--mario)">0</span></div>
+          <div class="flex items-center justify-between bg-white/60 rounded-lg px-4 py-2"><span class="font-black" style="color:var(--ink)">金幣 COINS</span><span class="pixel text-sm" id="res-coins" style="color:var(--ink)">0</span></div>
+          <div class="flex items-center justify-between bg-white/60 rounded-lg px-4 py-2"><span class="font-black" style="color:var(--ink)">一次答對率</span><span class="pixel text-sm" id="res-perfect" style="color:var(--pipe)">0%</span></div>
+          <div class="flex items-center justify-between bg-white/60 rounded-lg px-4 py-2"><span class="font-black" style="color:var(--ink)">評價 RANK</span><span class="pixel text-sm" id="res-rank" style="color:var(--grass)">C</span></div>
+        </div>
+        <div class="mt-7 space-y-3">
+          <button id="btn-report" class="btn-3d w-full rounded-xl py-3 pixel text-xs text-white shadow-[0_6px_0_rgba(0,0,0,.2)]" style="background:#f59e0b;border:6px solid #b45309">📊 學習報告</button>
+          <button id="btn-retry" class="btn-3d w-full rounded-xl py-3 pixel text-xs text-white shadow-[0_6px_0_rgba(0,0,0,.2)]" style="background:var(--grass);border:6px solid #006400">再玩一次</button>
+          <button id="btn-next-level" class="btn-3d w-full rounded-xl py-3 pixel text-xs text-white shadow-[0_6px_0_rgba(0,0,0,.2)]" style="background:var(--pipe);border:6px solid #003ab0">下一關</button>
+          <button onclick="goMenu()" class="btn-3d w-full rounded-xl py-3 pixel text-xs text-white shadow-[0_6px_0_rgba(0,0,0,.2)]" style="background:var(--mario);border:6px solid #a32a10">回主選單</button>
+        </div>
+      </div>
+    </div>
+    <div class="ground"></div>
+  </section>
+</div>
+
+<!-- 點珠提示 -->
+<div id="bead-hint" class="hidden"></div>
+
+<!-- 學習報告 -->
+<div id="report-modal" class="hidden fixed inset-0 z-[9500] items-center justify-center p-4" style="background:rgba(15,23,42,.82)">
+  <div class="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[88vh] flex flex-col overflow-hidden" style="border:4px solid var(--panel)">
+    <div class="p-5 flex justify-between items-center text-white" style="background:var(--pipe)">
+      <h2 class="text-xl font-black">📊 學習診斷報告</h2>
+      <button onclick="closeReport()" class="text-3xl font-black leading-none">&times;</button>
+    </div>
+    <div id="report-summary" class="p-4 font-bold flex flex-wrap gap-4 justify-around" style="background:#eef2ff"></div>
+    <div class="p-4 overflow-y-auto flex-1 bg-slate-50">
+      <table class="w-full text-left border-collapse bg-white rounded-xl overflow-hidden">
+        <thead>
+          <tr class="bg-slate-200 text-slate-700 text-sm">
+            <th class="p-3">關卡</th><th class="p-3">題目</th>
+            <th class="p-3 text-center">嘗試次數</th><th class="p-3">錯誤診斷</th>
+          </tr>
+        </thead>
+        <tbody id="report-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= 工具 ================= */
+const $ = (id) => document.getElementById(id);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+window.addEventListener('error', (e) => {
+  try {
+    let b = document.getElementById('err-banner');
+    if (!b) {
+      b = document.createElement('div');
+      b.id = 'err-banner';
+      b.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#7f1d1d;color:#fff;padding:10px;font-size:12px;line-height:1.4;white-space:pre-wrap;';
+      document.body.appendChild(b);
+    }
+    b.textContent = '⚠ JS 錯誤：' + e.message + '（' + (e.filename || '') + ' 第 ' + e.lineno + ' 行）';
+  } catch (x) {}
+});
+const randInt = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+
+/* ================= 音效（瑪利歐風） ================= */
+const AudioFX = (() => {
+  let ctx = null;
+  function ac() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+  function tone(freq, start, dur, type, vol) {
+    const c = ac(), t0 = c.currentTime + (start || 0);
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type || 'square';
+    o.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol || 0.12, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(t0); o.stop(t0 + dur + 0.03);
+  }
+  function glide(f1, f2, dur, type, vol) {
+    const c = ac(), t0 = c.currentTime;
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type || 'square';
+    o.frequency.setValueAtTime(f1, t0);
+    o.frequency.exponentialRampToValueAtTime(f2, t0 + dur);
+    g.gain.setValueAtTime(vol || 0.12, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(t0); o.stop(t0 + dur + 0.03);
+  }
+  function noise(dur, vol, start) {
+    const c = ac(), t0 = c.currentTime + (start || 0);
+    const n = Math.max(1, Math.floor(c.sampleRate * dur));
+    const buf = c.createBuffer(1, n, c.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const s = c.createBufferSource(); s.buffer = buf;
+    const g = c.createGain();
+    g.gain.setValueAtTime(vol || 0.15, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    s.connect(g); g.connect(c.destination); s.start(t0);
+  }
+  return {
+    coin() { tone(987.77, 0, 0.09, 'square', 0.12); tone(1318.51, 0.075, 0.32, 'square', 0.12); },
+    oneup() { [659.25, 783.99, 1318.51, 1046.5, 1174.66, 1567.98].forEach((f, i) => tone(f, i * 0.11, 0.12, 'square', 0.1)); },
+    correct() { tone(523.25, 0, 0.12, 'triangle', 0.1); tone(659.25, 0.1, 0.22, 'triangle', 0.1); },
+    error() { glide(320, 150, 0.4, 'sawtooth', 0.12); },
+    pop() { tone(800, 0, 0.08, 'sine', 0.06); },
+    fly() { glide(400, 900, 0.55, 'sine', 0.05); },
+    drop() { glide(420, 200, 0.18, 'sine', 0.05); },
+    slash() { glide(320, 110, 0.15, 'sawtooth', 0.1); },
+    click() { tone(660, 0, 0.05, 'square', 0.07); },
+    applause() { for (let i = 0; i < 30; i++) noise(0.05, 0.1, i * 0.06 + Math.random() * 0.04); },
+    fireworks() { for (let k = 0; k < 4; k++) setTimeout(() => { noise(0.45, 0.16, 0); glide(200, 70, 0.35, 'sine', 0.07); }, k * 320); },
+    levelComplete() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, i * 0.14, 0.3, 'triangle', 0.1)); }
+  };
+})();
+
+/* ================= 狀態 ================= */
+const state = {
+  screen: 'menu', category: 'add', digits: 3, op: '+', level: 1, qNum: 1, maxQ: 10,
+  score: 0, coins: 0,
+  n1: 0, n2: 0, d: {},
+  phase: 0, step: 'u_check', cur: { h: 0, t: 0, u: 0 },
+  isAnimating: false, attempts: 0, errorDetails: [],
+  animPlayed: { h: false, t: false, u: false },
+  report: [], boardOp: null, activeIds: [], focusEl: null, lastCol: null
+};
+
+const LEVELS = {
+  add: [
+    { lv: 1, name: '無進位', desc: '個位與十位相加都不超過 9' },
+    { lv: 2, name: '一次進位', desc: '個位或十位其中一次進位' },
+    { lv: 3, name: '兩次進位', desc: '個位與十位都進位' },
+    { lv: 4, name: '綜合練習', desc: '隨機混合 1~3 關' }
+  ],
+  sub: [
+    { lv: 1, name: '不退位', desc: '每一位都夠減' },
+    { lv: 2, name: '一次退位', desc: '個位或十位借一次' },
+    { lv: 3, name: '兩次退位', desc: '連續兩次借位' },
+    { lv: 4, name: '綜合挑戰', desc: '隨機混合 1~3 關' }
+  ],
+  mixed: [
+    { lv: 1, name: '基礎混合', desc: '不進位 / 不退位' },
+    { lv: 2, name: '進退位混合', desc: '一次進位 / 退位' },
+    { lv: 3, name: '雙重進退位', desc: '兩次進位 / 退位' },
+    { lv: 4, name: '全部混合', desc: '隨機加法與減法' }
+  ]
+};
+const LEVEL_NAMES = { add: '加法大關', sub: '減法大關', mixed: '加減綜合' };
+
+/* ================= 畫面切換 ================= */
+function showScreen(name) {
+  state.screen = name;
+  ['menu', 'level', 'game', 'result'].forEach((s) => $('screen-' + s).classList.toggle('hidden', s !== name));
+  window.scrollTo(0, 0);
+}
+function goMenu() { AudioFX.click(); showScreen('menu'); }
+
+function pickCategory(cat, digits) {
+  AudioFX.click();
+  state.category = cat;
+  state.digits = digits || 3;
+  $('level-title').textContent = `${state.digits}位數 · ${LEVEL_NAMES[cat]}`;
+  const list = $('level-list');
+  list.innerHTML = '';
+  LEVELS[cat].forEach((item) => {
+    const b = document.createElement('button');
+    b.className = 'btn-3d w-full rounded-xl px-4 py-3 text-left shadow-[0_6px_0_rgba(0,0,0,.2)]';
+    b.style.background = 'var(--coin)';
+    b.style.border = '6px solid var(--border)';
+    b.innerHTML = `<div class="flex items-center gap-3">
+        <span class="pixel text-sm rounded px-2 py-1" style="background:rgba(255,255,255,.6);color:var(--ink)">1-${item.lv}</span>
+        <div><div class="font-black text-base" style="color:var(--ink)">${item.name}</div>
+        <div class="text-xs font-bold" style="color:rgba(58,42,0,.7)">${item.desc}</div></div></div>`;
+    b.onclick = () => startGame(cat, item.lv);
+    list.appendChild(b);
+  });
+  showScreen('level');
+}
+
+/* ================= 出題引擎 ================= */
+function makeAdd(level, digits) {
+  const dg = digits || state.digits || 3;
+  const lv = level === 4 ? randInt(1, 3) : level;
+  let h1, h2, u1, u2, t1, t2;
+  if (dg === 2) {
+    h1 = 0; h2 = 0;
+    if (lv === 1) {
+      u1 = randInt(0, 4); u2 = randInt(0, 9 - u1);
+      t1 = randInt(1, 4); t2 = randInt(1, 9 - t1);
+    } else if (lv === 2) {
+      u1 = randInt(6, 9); u2 = randInt(6, 9);
+      t1 = randInt(1, 4); t2 = randInt(1, 8 - t1);
+    } else {
+      u1 = randInt(6, 9); u2 = randInt(6, 9);
+      t1 = randInt(5, 9); t2 = randInt(5, 9);
+    }
+  } else {
+    h1 = randInt(2, 5); h2 = randInt(1, 3);
+    if (lv === 1) {
+      u1 = randInt(0, 4); u2 = randInt(0, 9 - u1);
+      t1 = randInt(0, 4); t2 = randInt(0, 9 - t1);
+    } else if (lv === 2) {
+      if (Math.random() > 0.5) {
+        u1 = randInt(6, 9); u2 = randInt(6, 9);
+        t1 = randInt(0, 3); t2 = randInt(0, 8 - t1);
+      } else {
+        u1 = randInt(0, 4); u2 = randInt(0, 9 - u1);
+        t1 = randInt(6, 9); t2 = randInt(6, 9);
+      }
+    } else {
+      u1 = randInt(6, 9); u2 = randInt(6, 9);
+      t1 = randInt(6, 9); t2 = randInt(6, 9);
+    }
+  }
+  return { n1: h1 * 100 + t1 * 10 + u1, n2: h2 * 100 + t2 * 10 + u2, d: { h1, t1, u1, h2, t2, u2 } };
+}
+
+function makeSub(level, digits) {
+  const dg = digits || state.digits || 3;
+  const lv = level === 4 ? randInt(1, 3) : level;
+  if (dg === 2 && lv !== 3) {
+    const t1 = randInt(2, 9);
+    let u1, t2, u2;
+    if (lv === 1) {
+      u1 = randInt(0, 9);
+      u2 = randInt(0, u1); t2 = randInt(1, t1);
+      if (t2 === t1 && u2 === u1) t2 = Math.max(1, t2 - 1);
+    } else {
+      u1 = randInt(0, 8);
+      u2 = randInt(u1 + 1, 9); t2 = randInt(1, t1 - 1);
+    }
+    return { n1: t1 * 10 + u1, n2: t2 * 10 + u2, d: { h1: 0, t1, u1, h2: 0, t2, u2 } };
+  }
+  if (dg === 2 && lv === 3) {
+    const t1 = randInt(1, 9), u1 = randInt(1, 8);
+    const u2 = randInt(u1 + 1, 9);
+    const t2 = randInt(Math.max(t1, 2), 9);
+    return { n1: 100 + t1 * 10 + u1, n2: t2 * 10 + u2, d: { h1: 1, t1, u1, h2: 0, t2, u2 } };
+  }
+  const h1 = randInt(4, 9), t1 = randInt(1, 8), u1 = randInt(1, 8);
+  let h2, t2, u2;
+  if (lv === 1) {
+    u2 = randInt(0, u1); t2 = randInt(0, t1); h2 = randInt(1, h1 - 1);
+  } else if (lv === 2) {
+    if (Math.random() > 0.5) {
+      u2 = randInt(u1 + 1, 9); t2 = randInt(0, Math.max(0, t1 - 1)); h2 = randInt(1, h1 - 1);
+    } else {
+      u2 = randInt(0, u1); t2 = randInt(t1 + 1, 9); h2 = randInt(1, h1 - 1);
+    }
+  } else {
+    u2 = randInt(u1 + 1, 9); t2 = randInt(t1, 9); h2 = randInt(1, h1 - 1);
+  }
+  return { n1: h1 * 100 + t1 * 10 + u1, n2: h2 * 100 + t2 * 10 + u2, d: { h1, t1, u1, h2, t2, u2 } };
+}
+
+/* ================= 積木 ================= */
+function createBlock(type) {
+  const el = document.createElement('div');
+  el.className = 'blk-' + type;
+  if (type === 'h') { for (let i = 0; i < 100; i++) el.appendChild(document.createElement('i')); }
+  else if (type === 't') { for (let i = 0; i < 10; i++) el.appendChild(document.createElement('i')); }
+  return el;
+}
+
+/* ================= 遊戲流程 ================= */
+function startGame(cat, level) {
+  AudioFX.click();
+  state.category = cat;
+  state.level = level;
+  state.qNum = 1;
+  state.score = 0;
+  state.coins = 0;
+  state.report = [];
+  state.boardOp = null;
+  showScreen('game');
+  nextQuestion();
+}
+
+function quitGame() { AudioFX.click(); showScreen('menu'); }
+
+function nextQuestion() {
+  if (state.qNum > state.maxQ) return finishLevel();
+
+  let op;
+  if (state.category === 'mixed') op = Math.random() < 0.5 ? '+' : '-';
+  else op = state.category === 'sub' ? '-' : '+';
+  state.op = op;
+
+  const q = op === '+' ? makeAdd(state.level, state.digits) : makeSub(state.level, state.digits);
+  state.n1 = q.n1; state.n2 = q.n2; state.d = q.d;
+  state.cur = op === '-' ? { h: q.d.h1, t: q.d.t1, u: q.d.u1 } : { h: 0, t: 0, u: 0 };
+  state.phase = 0;
+  state.step = op === '-' ? 'u_check' : 0;
+  state.isAnimating = false;
+  state.attempts = 0;
+  state.errorDetails = [];
+  state.animPlayed = { h: false, t: false, u: false };
+  state.lastCol = null;
+
+  if (state.boardOp !== op) { renderBoard(); state.boardOp = op; }
+
+  $('tb-world').textContent = state.digits + '-' + state.level;
+  $('q-progress').textContent = state.qNum;
+  $('score').textContent = String(state.score).padStart(4, '0');
+  $('coins').textContent = state.coins;
+
+  resetQuestionUI();
+  fillDigits();
+  renderBlocks();
+
+  if (op === '+') updateAddUI(false);
+  else checkSubStep();
+}
+
+function resetQuestionUI() {
+  document.querySelectorAll('#math-board input').forEach((el) => {
+    el.value = '';
+    el.disabled = true;
+    el.classList.remove('active', 'error', 'correct', 'crossed-input');
+    if (el.classList.contains('borrow-input')) el.classList.add('hidden');
+  });
+  ['n1-h', 'n1-t', 'n1-u'].forEach((id) => { const el = $(id); if (el) el.classList.remove('crossed-text'); });
+
+  $('btn-borrow').classList.add('hidden');
+  $('btn-next').classList.add('hidden');
+  $('btn-replay').classList.add('hidden');
+  $('mascot').textContent = '👩‍🏫';
+
+  if (state.op === '+') {
+    $('label-row1').textContent = '加數 1';
+    $('label-row2').textContent = '加數 2';
+    $('label-row3').textContent = '總和';
+  } else {
+    $('label-row1').innerHTML = '原有數量<br><span class="text-xs font-normal">(比較數量1)</span>';
+    $('label-row2').innerHTML = '被減掉數量<br><span class="text-xs font-normal">(比較數量2)</span>';
+    $('label-row3').innerHTML = '餘下數量<br><span class="text-xs font-normal">(相差數目)</span>';
+  }
+
+  ['a', 'b', 'c'].forEach((r) => ['h', 't', 'u'].forEach((c) => { const el = $('blk-' + r + '-' + c); if (el) el.innerHTML = ''; }));
+  $('blk-b-h').innerHTML = '<div id="stop-h" class="carry-stop-point"></div>';
+  $('blk-b-t').innerHTML = '<div id="stop-t" class="carry-stop-point"></div>';
+}
+
+function fillDigits() {
+  const d = state.d;
+  const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
+  set('n1-h', d.h1 ? d.h1 : ''); set('n1-t', d.t1); set('n1-u', d.u1);
+  set('n2-h', d.h2 ? d.h2 : ''); set('n2-t', d.t2); set('n2-u', d.u2);
+}
+
+function renderBlocks() {
+  const d = state.d;
+  if (state.op === '+') {
+    for (let i = 0; i < d.h1; i++) $('blk-a-h').appendChild(createBlock('h'));
+    for (let i = 0; i < d.t1; i++) $('blk-a-t').appendChild(createBlock('t'));
+    for (let i = 0; i < d.u1; i++) $('blk-a-u').appendChild(createBlock('u'));
+  } else {
+    for (let i = 0; i < state.cur.h; i++) $('blk-a-h').appendChild(createBlock('h'));
+    for (let i = 0; i < state.cur.t; i++) $('blk-a-t').appendChild(createBlock('t'));
+    for (let i = 0; i < state.cur.u; i++) $('blk-a-u').appendChild(createBlock('u'));
+  }
+  for (let i = 0; i < d.h2; i++) $('blk-b-h').appendChild(createBlock('h'));
+  for (let i = 0; i < d.t2; i++) $('blk-b-t').appendChild(createBlock('t'));
+  for (let i = 0; i < d.u2; i++) $('blk-b-u').appendChild(createBlock('u'));
+}
+
+/* ================= 直式算盤 ================= */
+function renderBoard() {
+  const b = $('math-board');
+  if (state.op === '+') {
+    if (state.digits === 2) {
+      b.innerHTML = `
+      <div class="math-row">
+        <div class="digit-cell"></div>
+        <div class="digit-cell"></div>
+        <div class="digit-cell"><span id="n1-t"></span></div>
+        <div class="digit-cell"><span id="n1-u"></span></div>
+      </div>
+      <div class="math-row">
+        <div class="digit-cell"><span class="op-sign">+</span></div>
+        <div class="digit-cell"></div>
+        <div class="digit-cell"><span id="n2-t"></span></div>
+        <div class="digit-cell"><span id="n2-u"></span></div>
+      </div>
+      <div class="math-row carry-row">
+        <div class="digit-cell"></div>
+        <div class="digit-cell"><input class="carry-input" id="carry-in-h" maxlength="1" inputmode="numeric"></div>
+        <div class="digit-cell"><input class="carry-input" id="carry-in-t" maxlength="1" inputmode="numeric"></div>
+        <div class="digit-cell"></div>
+      </div>
+      <div class="math-row ans-row">
+        <div class="digit-cell"></div>
+        <div class="digit-cell"><input class="main-ans" id="in-h" maxlength="1" inputmode="numeric"></div>
+        <div class="digit-cell"><input class="main-ans" id="in-t" maxlength="1" inputmode="numeric"></div>
+        <div class="digit-cell"><input class="main-ans" id="in-u" maxlength="1" inputmode="numeric"></div>
+      </div>`;
+    } else {
+      b.innerHTML = `
+      <div class="math-row">
+        <div class="digit-cell"></div><div class="digit-cell"></div>
+        <div class="digit-cell"><span id="n1-h"></span></div>
+        <div class="digit-cell"><span id="n1-t"></span></div>
+        <div class="digit-cell"><span id="n1-u"></span></div>
+      </div>
+      <div class="math-row">
+        <div class="digit-cell"><span class="op-sign">+</span></div>
+        <div class="digit-cell"></div>
+        <div class="digit-cell"><span id="n2-h"></span></div>
+        <div class="digit-cell"><span id="n2-t"></span></div>
+        <div class="digit-cell"><span id="n2-u"></span></div>
+      </div>
+      <div class="math-row carry-row">
+        <div class="digit-cell"></div>
+        <div class="digit-cell"><input class="carry-input" id="carry-in-th" maxlength="1" inputmode="numeric"></div>
+        <div class="digit-cell"><input class="carry-input" id="carry-in-h" maxlength="1" inputmode="numeric"></div>
+        <div class="digit-cell"><input class="carry-input" id="carry-in-t" maxlength="1" inputmode="numeric"></div>
+        <div class="digit-cell"></div>
+      </div>
+      <div class="math-row ans-row">
+        <div class="digit-cell"></div>
+        <div class="digit-cell"><input class="main-ans" id="in-th" maxlength="1" inputmode="numeric"></div>
+        <div class="digit-cell"><input class="main-ans" id="in-h" maxlength="1" inputmode="numeric"></div>
+        <div class="digit-cell"><input class="main-ans" id="in-t" maxlength="1" inputmode="numeric"></div>
+        <div class="digit-cell"><input class="main-ans" id="in-u" maxlength="1" inputmode="numeric"></div>
+      </div>`;
+    }
+    bindAddInputs();
+  } else {
+    b.innerHTML = `
+      <div class="math-row borrow-row">
+        <div class="digit-cell"><span class="borrow-tag">退位</span></div>
+        <div class="digit-cell"><input class="borrow-input hidden" id="in-h-b" maxlength="1" inputmode="numeric"></div>
+        <div class="digit-cell"><input class="borrow-input hidden" id="in-t-b2" maxlength="2" inputmode="numeric"></div>
+        <div class="digit-cell"></div>
+      </div>
+      <div class="math-row borrow-row">
+        <div class="digit-cell"></div><div class="digit-cell"></div>
+        <div class="digit-cell"><input class="borrow-input hidden" id="in-t-b1" maxlength="1" inputmode="numeric"></div>
+        <div class="digit-cell"><input class="borrow-input hidden" id="in-u-b" maxlength="2" inputmode="numeric"></div>
+      </div>
+      <div class="math-row">
+        <div class="digit-cell"></div>
+        <div class="digit-cell"><span id="n1-h"></span></div>
+        <div class="digit-cell"><span id="n1-t"></span></div>
+        <div class="digit-cell"><span id="n1-u"></span></div>
+      </div>
+      <div class="math-row">
+        <div class="digit-cell"><span class="op-sign">−</span></div>
+        <div class="digit-cell"><span id="n2-h"></span></div>
+        <div class="digit-cell"><span id="n2-t"></span></div>
+        <div class="digit-cell"><span id="n2-u"></span></div>
+      </div>
+      <div class="math-row ans-row">
+        <div class="digit-cell"></div>
+        <div class="digit-cell"><input class="main-ans" id="ans-h" maxlength="1" inputmode="numeric"></div>
+        <div class="digit-cell"><input class="main-ans" id="ans-t" maxlength="1" inputmode="numeric"></div>
+        <div class="digit-cell"><input class="main-ans" id="ans-u" maxlength="1" inputmode="numeric"></div>
+      </div>`;
+    bindSubInputs();
+  }
+}
+
+/* ================= 加法流程 ================= */
+const ADD_INPUTS = ['in-th', 'in-h', 'in-t', 'in-u', 'carry-in-th', 'carry-in-h', 'carry-in-t'];
+let autoTimer = null;
+
+function bindAddInputs() {
+  ADD_INPUTS.forEach((id) => {
+    const el = $(id);
+    if (!el) return;
+    el.addEventListener('input', onAddInput);
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { clearTimeout(autoTimer); if (!state.isAnimating) processAddCheck(); }
+    });
+  });
+}
+
+function addActiveInputs() {
+  let ids = [];
+  if (state.phase === 0) ids = ['in-u', 'carry-in-t'];
+  else if (state.phase === 1) ids = ['in-t', 'carry-in-h'];
+  else if (state.phase === 2) ids = ['in-h', 'in-th', 'carry-in-th'];
+  return ids.filter((id) => $(id));
+}
+
+function defaultAddMsg() {
+  if (state.phase === 0) return '💡 <b>第一步：</b>請計算【個位】。<br><span class="text-rose-600">填寫數字後，系統會自動檢查喔！</span>';
+  if (state.phase === 1) return '💡 <b>第二步：</b>請計算【十位】。<br><span class="text-rose-600">記得加上進位！</span>';
+  return '💡 <b>最後一步：</b>請計算【百位】。<br><span class="text-rose-600">填入最後答案完成挑戰！</span>';
+}
+
+function updateAddUI(isError, msg) {
+  ADD_INPUTS.forEach((id) => {
+    const el = $(id);
+    if (!el) return;
+    el.classList.remove('active', 'error');
+    el.disabled = true;
+  });
+  const act = addActiveInputs();
+  act.forEach((id) => {
+    const el = $(id);
+    if (!el) return;
+    el.disabled = false;
+    el.classList.add(isError ? 'error' : 'active');
+  });
+  state.activeIds = act;
+  $('instruction').innerHTML = msg || defaultAddMsg();
+  if (!isError && act.length) { const el = $(act[0]); if (el) el.focus(); }
+}
+
+function onAddInput() {
+  if (state.isAnimating) return;
+  clearTimeout(autoTimer);
+  state.activeIds.forEach((id) => {
+    const el = $(id);
+    if (el) { el.classList.remove('error'); if (!el.classList.contains('correct')) el.classList.add('active'); }
+  });
+  const mainId = state.phase === 0 ? 'in-u' : state.phase === 1 ? 'in-t' : 'in-h';
+  const mainEl = $(mainId);
+  if (mainEl && mainEl.value !== '') {
+    $('instruction').innerHTML = '⏳ <span style="color:#0058f8">接收到答案，確認中...</span>';
+    autoTimer = setTimeout(() => { if (!state.isAnimating) processAddCheck(); }, 1200);
+  } else {
+    updateAddUI(false);
+  }
+}
+
+function markCorrect(ids) {
+  ids.forEach((id) => { const el = $(id); if (el) { el.classList.remove('active', 'error'); el.classList.add('correct'); } });
+}
+
+async function processAddCheck() {
+  if (state.isAnimating) return;
+  AudioFX.click();
+  state.isAnimating = true;
+  clearTimeout(autoTimer);
+
+  const d = state.d;
+  const carryT = Math.floor((d.u1 + d.u2) / 10);
+  const carryH = Math.floor((d.t1 + d.t2 + carryT) / 10);
+  let ok = false, msg = '';
+
+  if (state.phase === 0) {
+    const inU = parseInt($('in-u').value);
+    const cinT = $('carry-in-t').value === '' ? 0 : parseInt($('carry-in-t').value);
+    const ansU = (d.u1 + d.u2) % 10;
+    ok = inU === ansU && cinT === carryT;
+    if (!ok) { state.attempts++; if (inU !== ansU) logError('個位答案錯誤'); if (cinT !== carryT) logError('十位進位標記錯誤'); }
+    $('instruction').innerHTML = '👀 注意看積木的變化...';
+    await playUnitAnimation(d.u1, d.u2);
+    if (ok) {
+      AudioFX.coin(); if (carryT > 0) AudioFX.oneup();
+      markCorrect(['in-u', 'carry-in-t']);
+      state.phase = 1;
+      msg = '✅ <span style="color:#16a34a">個位算對了！</span>接下來請計算<b>【十位】</b>。' + (carryT > 0 ? '<div>👉 <span class="text-rose-600 font-bold">記得加上剛剛的進位喔！</span></div>' : '');
+    } else {
+      AudioFX.error();
+      showBeadHint(d.u1 + d.u2, '#f8d820', `個位：${d.u1} + ${d.u2}`);
+      msg = '❌ <span class="text-red-600 font-bold">有地方出錯了！</span><div>請重新計算，數清楚積木數量。</div>';
+    }
+  } else if (state.phase === 1) {
+    const inT = parseInt($('in-t').value);
+    const cinH = $('carry-in-h').value === '' ? 0 : parseInt($('carry-in-h').value);
+    const totalT = d.t1 + d.t2 + carryT;
+    const ansT = totalT % 10;
+    ok = inT === ansT && cinH === carryH;
+    if (!ok) { state.attempts++; if (inT !== ansT) logError('十位答案錯誤'); if (cinH !== carryH) logError('百位進位標記錯誤'); }
+    $('instruction').innerHTML = '👀 注意看積木的變化...';
+    await playTenAnimation(d.t1, d.t2, carryT);
+    if (ok) {
+      AudioFX.coin(); if (carryH > 0) AudioFX.oneup();
+      markCorrect(['in-t', 'carry-in-h']);
+      if (d.h1 + d.h2 + carryH > 0) {
+        state.phase = 2;
+        msg = '✅ <span style="color:#16a34a">十位也算對了！</span>最後請完成<b>【百位】</b>。' + (carryH > 0 ? '<div>👉 <span class="text-rose-600 font-bold">記得加上剛才的進位喔！</span></div>' : '');
+      } else {
+        state.phase = 3;
+        msg = '🏆 <span style="color:#16a34a" class="font-black">太棒了，整題都計算正確！</span>';
+      }
+    } else {
+      AudioFX.error();
+      showBeadHint(totalT, '#00a800', `十位：${d.t1} + ${d.t2} + 進位 ${carryT}`);
+      msg = '❌ <span class="text-red-600 font-bold">有地方出錯了！</span><div>答案或進位標記不對喔。</div>';
+    }
+  } else if (state.phase === 2) {
+    const inHEl = $('in-h');
+    const inHStr = inHEl && inHEl.value !== '' ? String(parseInt(inHEl.value)) : '';
+    const inThEl = $('in-th');
+    const inThStr = inThEl && inThEl.value !== '' ? String(parseInt(inThEl.value)) : '';
+    const cinThEl = $('carry-in-th');
+    const cinTh = cinThEl && cinThEl.value !== '' ? parseInt(cinThEl.value) : 0;
+    const totalH = d.h1 + d.h2 + carryH;
+    const ansH = totalH % 10;
+    const carryTh = Math.floor(totalH / 10);
+    const expHStr = totalH > 0 ? String(ansH) : '';
+    const expThStr = carryTh > 0 ? String(carryTh) : '';
+    ok = inHStr === expHStr && inThStr === expThStr && cinTh === carryTh;
+    if (!ok) { state.attempts++; if (inHStr !== expHStr) logError('百位答案錯誤'); if (cinTh !== carryTh) logError('千位進位標記錯誤'); }
+    $('instruction').innerHTML = '👀 注意看積木的變化...';
+    await playHundredAnimation(d.h1, d.h2, carryH);
+    if (ok) {
+      AudioFX.correct();
+      markCorrect(['in-h', 'in-th']);
+      state.phase = 3;
+      msg = '🏆 <span style="color:#16a34a" class="font-black">太棒了，整題都計算正確！</span>';
+    } else {
+      AudioFX.error();
+      showBeadHint(totalH, '#e84a23', `百位：${d.h1} + ${d.h2} + 進位 ${carryH}`);
+      msg = '❌ <span class="text-red-600 font-bold">百位有錯誤！</span><div>請重新計算，數清楚積木數量。</div>';
+    }
+  }
+
+  state.isAnimating = false;
+  if (!ok) {
+    addActiveInputs().forEach((id) => { const el = $(id); if (el) el.value = ''; });
+    $('btn-replay').classList.remove('hidden');
+    updateAddUI(true, msg);
+    setInputsDisabled(false);
+  } else {
+    updateAddUI(false, msg);
+    if (state.phase === 3) finishQuestion();
+  }
+}
+
+function setInputsDisabled(v) {
+  addActiveInputs().forEach((id) => { const el = $(id); if (el) el.disabled = v; });
+}
+
+/* ================= 加法動畫 ================= */
+async function gatherBlocks(sourceIds, targetId, type) {
+  const target = $(targetId);
+  target.innerHTML = '';
+  let blocks = [];
+  sourceIds.forEach((id) => {
+    const src = $(id);
+    if (src) blocks = blocks.concat(Array.from(src.querySelectorAll('.blk-' + type)));
+  });
+  if (!blocks.length) return;
+
+  blocks.forEach((b) => { b.style.opacity = '1'; b.style.filter = 'none'; b.style.transition = 'all .3s'; });
+  blocks.forEach((b) => b.classList.add('flash-highlight'));
+  AudioFX.pop();
+  await sleep(400);
+  blocks.forEach((b) => b.classList.remove('flash-highlight'));
+  await sleep(100);
+
+  const clones = [], targets = [];
+  blocks.forEach((b) => {
+    const t = createBlock(type); t.style.opacity = '0'; target.appendChild(t); targets.push(t);
+    const r = b.getBoundingClientRect();
+    const c = createBlock(type); c.classList.add('flying-block');
+    c.style.left = r.left + 'px'; c.style.top = r.top + 'px';
+    document.body.appendChild(c); clones.push(c);
+    b.style.opacity = '.2'; b.style.filter = 'grayscale(50%)';
+  });
+  await sleep(50);
+  AudioFX.fly();
+  clones.forEach((c, i) => { const r = targets[i].getBoundingClientRect(); c.style.left = r.left + 'px'; c.style.top = r.top + 'px'; });
+  await sleep(1200);
+  AudioFX.pop();
+  targets.forEach((t) => { t.style.opacity = '1'; t.style.transition = 'all .3s'; });
+  clones.forEach((c) => c.parentNode && c.parentNode.removeChild(c));
+  await sleep(300);
+}
+
+async function playUnitAnimation(u1, u2) {
+  await gatherBlocks(['blk-a-u', 'blk-b-u'], 'blk-c-u', 'u');
+  const resU = $('blk-c-u');
+  const target = $('stop-t');
+  if (target) target.innerHTML = '';
+  if (u1 + u2 >= 10 && target) {
+    const units = resU.querySelectorAll('.blk-u');
+    for (let i = 0; i < 10 && i < units.length; i++) units[i].classList.add('carry-highlight');
+    await sleep(800);
+    AudioFX.fly();
+    const start = units[0].getBoundingClientRect();
+    const end = target.getBoundingClientRect();
+    const flyer = createBlock('t'); flyer.classList.add('flying-block');
+    flyer.style.left = start.left + 'px'; flyer.style.top = start.top + 'px';
+    document.body.appendChild(flyer);
+    for (let i = 0; i < 10 && i < units.length; i++) units[i].style.opacity = '0';
+    await sleep(1200);
+    target.appendChild(createBlock('t'));
+    AudioFX.pop();
+    if (flyer.parentNode) flyer.parentNode.removeChild(flyer);
+    resU.innerHTML = '';
+    for (let i = 0; i < u1 + u2 - 10; i++) resU.appendChild(createBlock('u'));
+    await sleep(400);
+  }
+}
+
+async function playTenAnimation(t1, t2, carryT) {
+  await gatherBlocks(['blk-a-t', 'blk-b-t'], 'blk-c-t', 't');
+  const resT = $('blk-c-t');
+  const target = $('stop-h');
+  if (target) target.innerHTML = '';
+  if (t1 + t2 + carryT >= 10 && target) {
+    const strips = resT.querySelectorAll('.blk-t');
+    for (let i = 0; i < 10 && i < strips.length; i++) strips[i].classList.add('carry-highlight');
+    await sleep(800);
+    AudioFX.fly();
+    const start = strips[0].getBoundingClientRect();
+    const end = target.getBoundingClientRect();
+    const flyer = createBlock('h'); flyer.classList.add('flying-block');
+    flyer.style.left = start.left + 'px'; flyer.style.top = start.top + 'px';
+    document.body.appendChild(flyer);
+    for (let i = 0; i < 10 && i < strips.length; i++) strips[i].style.opacity = '0';
+    await sleep(1200);
+    target.appendChild(createBlock('h'));
+    AudioFX.pop();
+    if (flyer.parentNode) flyer.parentNode.removeChild(flyer);
+    resT.innerHTML = '';
+    for (let i = 0; i < t1 + t2 + carryT - 10; i++) resT.appendChild(createBlock('t'));
+    await sleep(400);
+  }
+}
+
+async function playHundredAnimation(h1, h2, carryH) {
+  await gatherBlocks(['blk-a-h', 'blk-b-h'], 'blk-c-h', 'h');
+  const resH = $('blk-c-h');
+  if (h1 + h2 + carryH >= 10) {
+    const blocks = resH.querySelectorAll('.blk-h');
+    for (let i = 0; i < 10 && i < blocks.length; i++) blocks[i].classList.add('carry-highlight');
+    await sleep(900);
+  }
+}
+
+/* ================= 減法流程 ================= */
+function bindSubInputs() {
+  const map = [['in-t-b1', 'u'], ['in-u-b', 'u'], ['in-h-b', 't'], ['in-t-b2', 't']];
+  map.forEach(([id, type]) => { const el = $(id); if (el) el.addEventListener('input', () => validateBorrow(type)); });
+  const ans = [['ans-u', 'u'], ['ans-t', 't'], ['ans-h', 'h']];
+  ans.forEach(([id, type]) => { const el = $(id); if (el) el.addEventListener('input', () => validateSubAnswer(type)); });
+}
+
+function checkSubStep() {
+  const d = state.d;
+  const s2 = { h: d.h2, t: d.t2, u: d.u2 };
+  ['ans-u', 'ans-t', 'ans-h'].forEach((id) => { const el = $(id); if (el) el.classList.remove('active'); });
+  if (state.step === 'u_check') {
+    if (state.cur.u < s2.u) {
+      $('instruction').innerHTML = `個位只有 <span class="text-rose-600 font-black">${state.cur.u}</span>，不夠減 <b>${s2.u}</b>，請向左借位。`;
+      $('btn-borrow').classList.remove('hidden');
+    } else {
+      $('instruction').innerHTML = `個位夠減了！請在右側輸入 <b>${state.cur.u} − ${s2.u}</b> 的答案。`;
+      const el = $('ans-u'); el.disabled = false; el.classList.add('active'); el.focus();
+      state.step = 'u_ans';
+    }
+  } else if (state.step === 't_check') {
+    if (state.cur.t < s2.t) {
+      $('instruction').innerHTML = `十位剩下 <span class="text-rose-600 font-black">${state.cur.t}</span>，不夠減 <b>${s2.t}</b>，請向左借位。`;
+      $('btn-borrow').classList.remove('hidden');
+    } else {
+      $('instruction').innerHTML = `十位夠減了！請輸入 <b>${state.cur.t} − ${s2.t}</b> 的答案。`;
+      const el = $('ans-t'); el.disabled = false; el.classList.add('active'); el.focus();
+      state.step = 't_ans';
+    }
+  } else if (state.step === 'h_ans') {
+    $('instruction').innerHTML = `最後一步！計算百位 <b>${state.cur.h} − ${s2.h}</b>。`;
+    const el = $('ans-h'); el.disabled = false; el.classList.add('active'); el.focus();
+  }
+}
+
+function onBorrowClick() {
+  if (state.step === 'u_check') {
+    $('btn-borrow').classList.add('hidden');
+    $('n1-t').classList.add('crossed-text');
+    ['in-t-b1', 'in-u-b'].forEach((id) => { const el = $(id); el.classList.remove('hidden'); el.disabled = false; });
+    $('in-t-b1').focus();
+    if ($('in-t-b1').scrollIntoView) $('in-t-b1').scrollIntoView({ block: 'center', behavior: 'smooth' });
+    $('instruction').innerHTML = '請在虛線框內輸入：<b>十位退位後剩多少？</b> <b>個位加 10 後變多少？</b>';
+    state.step = 'u_borrow';
+  } else if (state.step === 't_check') {
+    $('btn-borrow').classList.add('hidden');
+    $('n1-h').classList.add('crossed-text');
+    if (!$('in-t-b1').classList.contains('hidden')) $('in-t-b1').classList.add('crossed-input');
+    else $('n1-t').classList.add('crossed-text');
+    ['in-h-b', 'in-t-b2'].forEach((id) => { const el = $(id); el.classList.remove('hidden'); el.disabled = false; });
+    $('in-h-b').focus();
+    if ($('in-h-b').scrollIntoView) $('in-h-b').scrollIntoView({ block: 'center', behavior: 'smooth' });
+    $('instruction').innerHTML = '請輸入：<b>百位退位後剩多少？</b> <b>十位加 10 後變多少？</b>';
+    state.step = 't_borrow';
+  }
+}
+
+function logError(msg) { if (!state.errorDetails.includes(msg)) state.errorDetails.push(msg); }
+
+async function validateBorrow(type) {
+  if (state.isAnimating) return;
+  const isU = type === 'u';
+  const tEl = isU ? $('in-t-b1') : $('in-h-b');
+  const uEl = isU ? $('in-u-b') : $('in-t-b2');
+  const expectT = isU ? state.cur.t - 1 : state.cur.h - 1;
+  const expectU = isU ? state.cur.u + 10 : state.cur.t + 10;
+  const tName = isU ? '十位退位後剩多少' : '百位退位後剩多少';
+  const uName = isU ? '個位加 10 後變多少' : '十位加 10 後變多少';
+
+  const tComplete = tEl.value.length >= 1;
+  const uComplete = uEl.value.length >= 2;
+  const vT = parseInt(tEl.value), vU = parseInt(uEl.value);
+  const tOk = tComplete && vT === expectT;
+  const uOk = uComplete && vU === expectU;
+
+  tEl.classList.toggle('warn', tComplete && !tOk);
+  uEl.classList.toggle('warn', uComplete && !uOk);
+
+  if (!tComplete || !uComplete) {
+    $('instruction').innerHTML = `請把兩個退位框都填滿：左邊填「<b>${tName}</b>」(1 位數)，右邊填「<b>${uName}</b>」(2 位數)。`;
+    return;
+  }
+
+  if (tOk && uOk) {
+    state.isAnimating = true;
+    tEl.classList.remove('warn'); uEl.classList.remove('warn');
+    AudioFX.coin(); AudioFX.oneup();
+    tEl.classList.add('correct'); uEl.classList.add('correct');
+    if (isU) {
+      const strips = Array.from($('blk-a-t').querySelectorAll('.blk-t:not(.removing)'));
+      const target = strips[strips.length - 1];
+      if (target) { target.classList.add('carry-highlight'); await sleep(600); target.classList.add('removing'); await sleep(300); target.remove(); }
+      for (let i = 0; i < 10; i++) { const b = createBlock('u'); b.classList.add('pop-in'); $('blk-a-u').appendChild(b); AudioFX.pop(); await sleep(50); }
+      state.cur.t = expectT; state.cur.u = expectU;
+      state.step = 'u_check'; state.isAnimating = false; checkSubStep();
+    } else {
+      const hundreds = Array.from($('blk-a-h').querySelectorAll('.blk-h:not(.removing)'));
+      const target = hundreds[hundreds.length - 1];
+      if (target) { target.classList.add('carry-highlight'); await sleep(600); target.classList.add('removing'); await sleep(300); target.remove(); }
+      for (let i = 0; i < 10; i++) { const b = createBlock('t'); b.classList.add('pop-in'); $('blk-a-t').appendChild(b); AudioFX.pop(); await sleep(50); }
+      state.cur.h = expectT; state.cur.t = expectU;
+      state.step = 't_check'; state.isAnimating = false; checkSubStep();
+    }
+  } else {
+    state.attempts++;
+    if (isU) {
+      if (!tOk) logError('十位退位數值輸入錯誤');
+      if (!uOk) logError('個位借位加10計算錯誤');
+      showBeadHint(expectU, '#f8d820', `個位借位後：${state.cur.u} + 10`);
+    } else {
+      if (!tOk) logError('百位退位數值輸入錯誤');
+      if (!uOk) logError('十位借位加10計算錯誤');
+      showBeadHint(expectU, '#00a800', `十位借位後：${state.cur.t} + 10`);
+    }
+    AudioFX.error();
+    $('instruction').innerHTML = '❌ <span style="color:#dc2626">退位數字不對喔！</span>看看上面的點珠提示，再試一次。';
+    tEl.classList.remove('warn'); uEl.classList.remove('warn');
+    tEl.classList.add('error'); uEl.classList.add('error');
+    setTimeout(() => { tEl.classList.remove('error'); uEl.classList.remove('error'); }, 700);
+  }
+}
+
+async function playColumnAnimation(type, count) {
+  const cls = 'blk-' + type;
+  const r1 = $('blk-a-' + type), r2 = $('blk-b-' + type), r3 = $('blk-c-' + type);
+  const itemsR1 = Array.from(r1.querySelectorAll('.' + cls + ':not(.removing)'));
+  const itemsR2 = Array.from(r2.querySelectorAll('.' + cls + ':not(.removing)'));
+
+  if (count > 0) {
+    const rmR1 = itemsR1.slice(-count);
+    const rmR2 = itemsR2;
+    rmR1.forEach((e) => e.classList.add('blink-pair'));
+    rmR2.forEach((e) => e.classList.add('blink-pair'));
+    AudioFX.pop(); await sleep(600);
+    rmR1.forEach((e) => e.classList.add('cross-out'));
+    rmR2.forEach((e) => e.classList.add('cross-out'));
+    AudioFX.slash(); await sleep(500);
+    rmR1.forEach((e) => { e.style.transition = 'opacity .4s'; e.style.opacity = '0'; });
+    rmR2.forEach((e) => { e.style.transition = 'opacity .4s'; e.style.opacity = '0'; });
+    await sleep(400);
+    rmR1.forEach((e) => e.remove());
+    rmR2.forEach((e) => e.remove());
+  } else {
+    await sleep(300);
+  }
+
+  const remain = Array.from(r1.querySelectorAll('.' + cls + ':not(.removing)'));
+  if (remain.length) {
+    for (const el of remain) {
+      el.remove(); el.className = cls + ' drop-in'; el.style = '';
+      r3.appendChild(el);
+      AudioFX.drop(); await sleep(80);
+    }
+    await sleep(300);
+  }
+}
+
+async function replayColumn(type, count) {
+  if (state.isAnimating) return;
+  state.isAnimating = true;
+  const cls = 'blk-' + type;
+  $('blk-a-' + type).innerHTML = ''; $('blk-b-' + type).innerHTML = ''; $('blk-c-' + type).innerHTML = '';
+  for (let i = 0; i < state.cur[type]; i++) $('blk-a-' + type).appendChild(createBlock(type));
+  for (let i = 0; i < count; i++) $('blk-b-' + type).appendChild(createBlock(type));
+  await sleep(200);
+  await playColumnAnimation(type, count);
+  state.isAnimating = false;
+}
+
+async function validateSubAnswer(type) {
+  if (state.isAnimating) return;
+  const d = state.d;
+  const s2 = { h: d.h2, t: d.t2, u: d.u2 };
+  const count = s2[type];
+  const correct = state.cur[type] - count;
+  const el = type === 'u' ? $('ans-u') : type === 't' ? $('ans-t') : $('ans-h');
+  const val = parseInt(el.value);
+  if (isNaN(val)) return;
+  state.lastCol = { type, count };
+
+  if (!state.animPlayed[type]) {
+    state.isAnimating = true; el.disabled = true;
+    await playColumnAnimation(type, count);
+    state.animPlayed[type] = true; state.isAnimating = false; el.disabled = false; el.focus();
+  }
+
+  if (parseInt(el.value) === correct) {
+    state.isAnimating = true;
+    AudioFX.coin();
+    el.classList.remove('active');
+    el.classList.add('correct'); el.disabled = true;
+    $('mascot').textContent = '🤩';
+    await sleep(400);
+    state.isAnimating = false;
+    if (type === 'u') { state.step = 't_check'; checkSubStep(); }
+    else if (type === 't') {
+      if (state.cur.h - d.h2 > 0) { state.step = 'h_ans'; checkSubStep(); }
+      else { state.step = 'done'; finishQuestion(); }
+    } else { state.step = 'done'; finishQuestion(); }
+  } else {
+    state.attempts++;
+    logError(type === 'u' ? '個位減法計算錯誤' : type === 't' ? '十位減法計算錯誤' : '百位減法計算錯誤');
+    AudioFX.error();
+    $('mascot').textContent = '🤔';
+    el.classList.add('error');
+    el.value = '';
+    setTimeout(() => el.classList.remove('error'), 500);
+    showBeadHint(state.cur[type], '#f8d820', `${type === 'u' ? '個位' : type === 't' ? '十位' : '百位'}：${state.cur[type]} − ${count}`);
+    $('instruction').innerHTML = '答案不對喔！可以數數第三行的積木，或點「重看動畫」。';
+    $('btn-replay').classList.remove('hidden');
+  }
+}
+
+/* ================= 點珠提示動畫 ================= */
+let beadTimer = null;
+function showBeadHint(value, color, title) {
+  const box = $('bead-hint');
+  box.innerHTML = '';
+  if (title) {
+    const h = document.createElement('div');
+    h.className = 'bead-title';
+    h.textContent = title;
+    box.appendChild(h);
+  }
+  const wrap = document.createElement('div');
+  wrap.className = 'bead-wrap';
+  const n = Math.max(0, Math.min(value, 30));
+  for (let i = 0; i < n; i++) {
+    const b = document.createElement('div');
+    b.className = 'bead' + (i >= 10 ? ' bead-overflow' : '');
+    b.style.background = color;
+    b.style.animationDelay = (i * 35) + 'ms';
+    wrap.appendChild(b);
+    if ((i + 1) % 10 === 0 && i + 1 < n) {
+      const br = document.createElement('div');
+      br.className = 'bead-break';
+      wrap.appendChild(br);
+    }
+  }
+  box.appendChild(wrap);
+  const total = document.createElement('div');
+  total.className = 'bead-total';
+  total.textContent = `共 ${value} 顆` + (value >= 10 ? '（滿 10 顆合成一排，超過的在第二行）' : '');
+  box.appendChild(total);
+  box.classList.remove('hidden');
+  box.classList.add('anim-pop');
+  clearTimeout(beadTimer);
+  beadTimer = setTimeout(() => { box.classList.add('hidden'); box.classList.remove('anim-pop'); }, 3000);
+}
+
+/* ================= 題目完成 / 關卡結算 ================= */
+function finishQuestion() {
+  const sym = state.op === '+' ? '+' : '−';
+  state.report.push({ level: state.level, q: `${state.n1} ${sym} ${state.n2}`, attempts: state.attempts, errors: [...state.errorDetails] });
+  const bonus = state.attempts === 0 ? 50 : 0;
+  state.score += 100 + bonus;
+  state.coins += 1;
+  $('score').textContent = String(state.score).padStart(4, '0');
+  $('coins').textContent = state.coins;
+
+  if (state.qNum >= state.maxQ) {
+    AudioFX.levelComplete();
+    setTimeout(() => { AudioFX.applause(); }, 600);
+    setTimeout(() => { AudioFX.fireworks(); finishLevel(); }, 1800);
+  } else {
+    $('btn-next').classList.remove('hidden');
+    $('btn-next').textContent = `下一題 (${state.qNum + 1}/10) ➡️`;
+    $('btn-next').onclick = () => { AudioFX.click(); state.qNum++; nextQuestion(); };
+  }
+}
+
+function finishLevel() {
+  const total = state.report.length || 1;
+  const perfect = state.report.filter((r) => r.attempts === 0).length;
+  const rate = Math.round((perfect / total) * 100);
+  $('res-score').textContent = String(state.score).padStart(4, '0');
+  $('res-coins').textContent = state.coins;
+  $('res-perfect').textContent = rate + '%';
+  $('res-rank').textContent = rate >= 100 ? 'S' : rate >= 80 ? 'A' : rate >= 60 ? 'B' : 'C';
+  $('btn-next-level').textContent = state.level < 4 ? '下一關' : '選關卡';
+  showScreen('result');
+}
+
+/* ================= 學習報告 ================= */
+function showReport() {
+  AudioFX.click();
+  const body = $('report-body');
+  body.innerHTML = '';
+  const perfect = state.report.filter((r) => r.attempts === 0).length;
+  const totalAttempts = state.report.reduce((a, r) => a + r.attempts, 0);
+  $('report-summary').innerHTML = `
+    <span>🎯 一次答對率：<b style="color:#4f46e5">${state.report.length ? Math.round((perfect / state.report.length) * 100) : 0}%</b></span>
+    <span>🔄 總錯誤修正：<b style="color:#e11d48">${totalAttempts}</b> 次</span>
+    <span>✅ 完成題數：<b style="color:#16a34a">${state.report.length}</b> 題</span>`;
+
+  if (!state.report.length) {
+    body.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-500 font-bold">尚未有作答紀錄，請先完成題目喔！</td></tr>`;
+  } else {
+    state.report.forEach((r, i) => {
+      const cls = r.attempts === 0 ? 'bg-emerald-50' : r.attempts <= 2 ? 'bg-amber-50' : 'bg-rose-50';
+      const errHtml = r.errors.length ? r.errors.map((e) => `<div class="text-rose-600 text-xs font-bold">• ${e}</div>`).join('') : '<span class="text-slate-400">-</span>';
+      body.innerHTML += `<tr class="border-b border-slate-200 ${cls}">
+        <td class="p-3 font-bold text-slate-500">Q${i + 1}</td>
+        <td class="p-3 font-black text-lg">${r.q}</td>
+        <td class="p-3 text-center font-bold text-rose-600">${r.attempts} 次</td>
+        <td class="p-3">${errHtml}</td></tr>`;
+    });
+  }
+  $('report-modal').classList.remove('hidden');
+  $('report-modal').classList.add('flex');
+}
+function closeReport() { $('report-modal').classList.add('hidden'); $('report-modal').classList.remove('flex'); }
+
+/* ================= 鍵盤 / 數字鍵盤 ================= */
+document.addEventListener('focusin', (e) => { if (e.target.matches('input')) state.focusEl = e.target; });
+
+function numpadPress(k) {
+  let el = state.focusEl;
+  if (!el || el.disabled || !document.contains(el)) {
+    el = document.querySelector('#math-board input.active:not([disabled])')
+      || document.querySelector('#math-board input:not([disabled])');
+  }
+  if (!el || el.disabled) return;
+  state.focusEl = el;
+  AudioFX.click();
+  if (k === 'clear') { el.value = ''; }
+  else if (k === 'enter') {
+    if (state.op === '+' && !state.isAnimating) { clearTimeout(autoTimer); processAddCheck(); }
+    return;
+  } else {
+    const max = el.maxLength > 0 ? el.maxLength : 1;
+    el.value = (el.value + k).slice(0, max);
+  }
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.focus();
+}
+
+document.querySelectorAll('#numpad .numpad-key').forEach((btn) => {
+  btn.addEventListener('click', () => numpadPress(btn.dataset.k));
+});
+
+document.addEventListener('keydown', (e) => {
+  if (state.screen !== 'game') return;
+  if (e.key === 'Enter' && state.op === '+' && !state.isAnimating) { clearTimeout(autoTimer); processAddCheck(); }
+});
+
+/* ================= 事件綁定 ================= */
+$('btn-borrow').addEventListener('click', onBorrowClick);
+$('math-board').addEventListener('click', (e) => {
+  const t = e.target;
+  if (t && t.tagName === 'INPUT' && t.disabled && t.classList.contains('main-ans')) {
+    AudioFX.click();
+    $('instruction').innerHTML = state.op === '-'
+      ? '🔒 這一格要先完成「<span style="color:#e11d48">退位</span>」才能填喔！<br>請先按下方紅色按鈕，或填寫最上方的退位框。'
+      : '🔒 請先完成前面的步驟，再填這一格。';
+  }
+});
+$('btn-replay').addEventListener('click', async () => {
+  if (state.isAnimating) return;
+  AudioFX.click();
+  state.isAnimating = true;
+  const d = state.d;
+  if (state.op === '+') {
+    if (state.phase === 0) await playUnitAnimation(d.u1, d.u2);
+    else if (state.phase === 1) await playTenAnimation(d.t1, d.t2, Math.floor((d.u1 + d.u2) / 10));
+    else if (state.phase === 2) await playHundredAnimation(d.h1, d.h2, Math.floor((d.t1 + d.t2 + Math.floor((d.u1 + d.u2) / 10)) / 10));
+  } else {
+    const col = state.lastCol || { type: 'u', count: d.u2 };
+    await replayColumn(col.type, col.count);
+  }
+  state.isAnimating = false;
+});
+$('btn-report').addEventListener('click', showReport);
+$('btn-retry').addEventListener('click', () => startGame(state.category, state.level));
+$('btn-next-level').addEventListener('click', () => {
+  AudioFX.fireworks();
+  if (state.level < 4) startGame(state.category, state.level + 1);
+  else pickCategory(state.category, state.digits);
+});
+
+document.body.addEventListener('click', () => { try { AudioFX.click(); } catch (e) {} }, { once: true });
+
+/* ================= 啟動 ================= */
+showScreen('menu');
+</script>
+</body>
+</html>
